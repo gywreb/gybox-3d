@@ -4,7 +4,7 @@ import BoxEditable from "./components/BoxEditable/BoxEditable";
 const App = () => {
   return (
     <>
-      <div style={{ width: 1000, height: 500 }}>
+      <div className="w-full h-screen p-10">
         <BoxEditable />
       </div>
     </>
