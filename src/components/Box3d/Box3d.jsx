@@ -29,7 +29,7 @@ const Box3d = ({
       upperFrontFace,
       upperFace
     );
-  }, [length, width, height, faceColor, faceTexture]);
+  }, [length, width, height, faceColor, faceTexture, thickness]);
 
   const renderBottomFace = () => {
     const boxFaceController = new BoxFace(length, width, thickness); // width + height of box shape;
