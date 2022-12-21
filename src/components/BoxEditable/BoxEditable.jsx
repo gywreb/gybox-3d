@@ -4,23 +4,29 @@ import {
   PerspectiveCamera,
 } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import React, { Suspense, useMemo, useState } from "react";
+import React, { Suspense, useMemo, useRef, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import Button from "../../common/Button/Button";
 import Input from "../../common/Input/Input";
 import Select from "../../common/Select/Select";
 import {
   BOX_EDIT_DEFAULT_VALUES,
+  EXPORT_FORMATS,
   MATERIALS,
   RENDER_MODE,
 } from "../../constants/constants";
 import Box3d from "../Box3d/Box3d";
 import BoxDieline from "../BoxDieline/BoxDieline";
 import { capitalize } from "lodash";
+import BoxExporter from "../BoxExporter/BoxExporter";
+// import BoxAnimation from "../BoxAnimation/BoxAnimation";
 
 const BoxEditable = () => {
   const [renderMode, setRenderMode] = useState(RENDER_MODE.RENDER_2D);
   const [formValues, setFormValues] = useState(BOX_EDIT_DEFAULT_VALUES);
+  const canvasRef = useRef();
+  const sceneRef = useRef();
+  const cameraRef = useRef();
   const methods = useForm({ mode: "onTouched" });
   const { handleSubmit } = methods;
   const onSubmit = (data) => {
@@ -30,6 +36,7 @@ const BoxEditable = () => {
       height: Number(data.height),
       thickness: Number(data.thickness),
       texture: data.material.value,
+      format: data.format.value,
     });
   };
 
@@ -51,18 +58,33 @@ const BoxEditable = () => {
     }))
   );
 
+  const formatOptions = useMemo(() =>
+    Object.keys(EXPORT_FORMATS).map((label) => ({
+      label: label,
+      value: EXPORT_FORMATS[label],
+    }))
+  );
+
+  const handleChangeDownloadFormat = (format) => {
+    setFormValues((prev) => ({ ...prev, format: format.value }));
+  };
+
   return (
     <>
       <div className="flex h-full mt-20 items-center">
-        <div className="relative h-screen w-1/2 mr-4 mb-5">
+        <div className="relative h-screen w-2/3 mr-4 mb-5">
           <Canvas
             shadows
             flat
             linear
             style={{ background: "#f9f9f9", borderRadius: "10px" }}
+            gl={{ preserveDrawingBuffer: true }}
+            ref={canvasRef}
           >
             <Suspense fallback={null}>
+              <scene ref={sceneRef} />
               <PerspectiveCamera
+                ref={cameraRef}
                 position={[300, 200, 700]}
                 fov={25}
                 near={0.1}
@@ -88,11 +110,7 @@ const BoxEditable = () => {
               {is3dRenderMode && (
                 <>
                   <OrbitControls />
-                  <Box3d
-                    {...formValues}
-                    faceTexture={formValues.texture}
-                    lineColor={0xfe5959}
-                  />
+                  <Box3d {...formValues} faceTexture={formValues.texture} />
                 </>
               )}
               {!is3dRenderMode && (
@@ -161,6 +179,22 @@ const BoxEditable = () => {
               >
                 Apply
               </Button>
+              <div className="mt-2">
+                <Select
+                  id="format"
+                  label="Download Formats"
+                  placeholder="Choose custom material"
+                  options={formatOptions}
+                  defaultValue={formatOptions[0]}
+                  handleChangeValue={handleChangeDownloadFormat}
+                />
+                <BoxExporter
+                  cameraRef={cameraRef}
+                  sceneRef={sceneRef}
+                  canvasRef={canvasRef}
+                  downloadFormat={formValues.format}
+                />
+              </div>
             </form>
           </FormProvider>
         </div>

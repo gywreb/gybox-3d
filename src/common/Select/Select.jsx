@@ -10,6 +10,7 @@ const Select = ({
   validation,
   options,
   defaultValue,
+  handleChangeValue,
 }) => {
   const customStyles = {
     control: (styles, state) => ({
@@ -83,6 +84,10 @@ const Select = ({
             return (
               <ReactSelect
                 {...field}
+                onChange={(value) => {
+                  field.onChange(value);
+                  if (handleChangeValue) handleChangeValue(value);
+                }}
                 isDisabled={disabled}
                 placeholder={placeholder}
                 options={optionsObject}

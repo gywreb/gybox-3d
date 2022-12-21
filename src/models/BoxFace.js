@@ -3,11 +3,11 @@ import { TextGeometry } from "three/addons/geometries/TextGeometry.js";
 import { FontLoader } from "three/addons/loaders/FontLoader.js";
 
 export default class BoxFace {
-  constructor(width, height, thickness) {
+  constructor(width, height, thickness, name) {
     this.width = width;
     this.height = height;
     this.thickness = thickness;
-    this.data = {};
+    this.name = name || "";
   }
 
   createLengthDefineLine(color, x, y, z) {
@@ -202,6 +202,7 @@ export default class BoxFace {
       THREE.MathUtils.degToRad(rz || 0)
     );
     mesh.receiveShadow = true;
+    mesh.name = this.name;
 
     return mesh;
   }
