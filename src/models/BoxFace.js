@@ -181,11 +181,11 @@ export default class BoxFace {
     if (texture?.length) {
       faceTexture = new THREE.TextureLoader().load(texture);
       faceTexture.wrapS = faceTexture.wrapT = THREE.RepeatWrapping;
-      faceTexture.repeat.set(0.005, 0.005);
+      faceTexture.repeat.set(0.005, 0.01);
     }
 
     const geometry = new THREE.ExtrudeGeometry(squareShape, extrudeSettings);
-    const material = new THREE.MeshPhongMaterial(
+    const material = new THREE.MeshStandardMaterial(
       texture?.length
         ? {
             map: faceTexture,
@@ -202,6 +202,7 @@ export default class BoxFace {
       THREE.MathUtils.degToRad(rz || 0)
     );
     mesh.receiveShadow = true;
+    mesh.castShadow = true;
     mesh.name = this.name;
 
     return mesh;

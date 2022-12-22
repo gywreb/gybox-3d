@@ -1,4 +1,7 @@
+import { useHelper } from "@react-three/drei";
+import { useFrame, useThree } from "@react-three/fiber";
 import React, { useEffect, useRef } from "react";
+import { PointLightHelper } from "three";
 import { MATERIALS } from "../../constants/constants";
 import BoxFace from "../../models/BoxFace";
 
@@ -9,8 +12,15 @@ const Box3d = ({
   thickness = 0.5,
   faceColor = 0xba7b13,
   faceTexture = MATERIALS.CARDBOARD,
+  isPreviewMockup,
+  lightGroup,
+  is3dRenderMode,
 }) => {
   const groupRef = useRef();
+  const { camera } = useThree();
+  const upperFaceRef = useRef();
+  // useHelper(lightHolder, PointLightHelper, 10, "cyan");
+  // useHelper(sideLight, PointLightHelper, 10, "red");
 
   useEffect(() => {
     const bottomFace = renderBottomFace();
@@ -19,6 +29,7 @@ const Box3d = ({
     const belowFrontFace = renderBelowFrontFace();
     const upperFrontFace = renderUpperFrontFace();
     const upperFace = renderUpperFace();
+    upperFaceRef.current = upperFace;
 
     groupRef.current?.clear();
     groupRef.current?.add(
@@ -29,7 +40,25 @@ const Box3d = ({
       upperFrontFace,
       upperFace
     );
-  }, [length, width, height, faceColor, faceTexture, thickness]);
+  }, [
+    length,
+    width,
+    height,
+    faceColor,
+    faceTexture,
+    thickness,
+    isPreviewMockup,
+  ]);
+
+  useFrame(({ camera }) => {
+    lightGroup.current.quaternion.copy(camera.quaternion);
+  });
+
+  useEffect(() => {
+    if (is3dRenderMode) {
+      camera.position.set(300, 200, 700);
+    } else camera.position.set(0, 0, 0);
+  }, [isPreviewMockup, is3dRenderMode]);
 
   const renderBottomFace = () => {
     const boxFaceController = new BoxFace(length, width, thickness); // width + height of box shape;
@@ -108,7 +137,7 @@ const Box3d = ({
       -length / 2,
       -width / 2 + height,
       0,
-      90,
+      isPreviewMockup ? 45 : 90,
       0,
       0,
       1

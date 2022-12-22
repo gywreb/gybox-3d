@@ -5,13 +5,14 @@ import { DEFAULT_EXPORT_NAME, EXPORT_FORMATS } from "../../constants/constants";
 import { jsPDF } from "jspdf";
 import { saveAs } from "file-saver";
 import { SVGRenderer } from "three/examples/jsm/renderers/SVGRenderer";
+import * as THREE from "three";
 
 const BoxExporter = ({
   cameraRef,
-  sceneRef,
   canvasRef,
   downloadFormat,
   exportName = DEFAULT_EXPORT_NAME,
+  isColorFace,
 }) => {
   const handleDownloadBox = () => {
     if (canvasRef.current) {
@@ -28,18 +29,26 @@ const BoxExporter = ({
           break;
         }
         case EXPORT_FORMATS.SVG: {
-          const rendererSvg = new SVGRenderer();
-          rendererSvg.setSize(window.innerWidth, window.innerHeight);
-          rendererSvg.render(sceneRef.current, cameraRef.current);
+          if (isColorFace) {
+            const rendererSvg = new SVGRenderer();
+            rendererSvg.setSize(
+              canvasRef.current.clientWidth,
+              canvasRef.current.clientHeight
+            );
+            // camera parent === scene
+            rendererSvg.render(cameraRef.current.parent, cameraRef.current);
 
-          const XMLS = new XMLSerializer();
-          const svgfile = XMLS.serializeToString(rendererSvg.domElement);
-          const svgData = svgfile;
-          const preface = '<?xml version="1.0" standalone="no"?>\r\n';
-          const svgBlob = new Blob([preface, svgData], {
-            type: "image/svg+xml;charset=utf-8",
-          });
-          saveAs(svgBlob, `${exportName}.svg`);
+            const XMLS = new XMLSerializer();
+            const svgfile = XMLS.serializeToString(rendererSvg.domElement);
+            const svgData = svgfile;
+            const preface = '<?xml version="1.0" standalone="no"?>\r\n';
+            const svgBlob = new Blob([preface, svgData], {
+              type: "image/svg+xml;charset=utf-8",
+            });
+            saveAs(svgBlob, `${exportName}.svg`);
+          } else {
+            alert("Please buy premium version to export svg with material");
+          }
           break;
         }
         default: {

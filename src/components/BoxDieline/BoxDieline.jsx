@@ -1,3 +1,4 @@
+import { useFrame } from "@react-three/fiber";
 import React, { useEffect, useRef } from "react";
 import BoxFace from "../../models/BoxFace";
 
@@ -28,6 +29,10 @@ const BoxDieline = ({ length, width, height, lineColor }) => {
       heightDefineLine
     );
   }, [length, width, height]);
+
+  useFrame(({ camera }) => {
+    camera.position.set(0, 0, 0);
+  });
 
   const renderBottomFace = () => {
     const boxFaceController = new BoxFace(length, width); // width + height of box shape;
