@@ -29,7 +29,7 @@ export default class BoxFace {
     const fontLoader = new FontLoader();
 
     fontLoader.load(
-      "/src/assets/fonts/helvetiker_regular.typeface.json",
+      "/assets/fonts/helvetiker_regular.typeface.json",
       function (font) {
         const geometry = new TextGeometry(`L : ${width} mm`, {
           font: font,
@@ -71,7 +71,7 @@ export default class BoxFace {
     const fontLoader = new FontLoader();
 
     fontLoader.load(
-      "/src/assets/fonts/helvetiker_regular.typeface.json",
+      "/assets/fonts/helvetiker_regular.typeface.json",
       function (font) {
         const geometry = new TextGeometry(`W : ${height} mm`, {
           font: font,
@@ -113,7 +113,7 @@ export default class BoxFace {
     const fontLoader = new FontLoader();
 
     fontLoader.load(
-      "/src/assets/fonts/helvetiker_regular.typeface.json",
+      "/assets/fonts/helvetiker_regular.typeface.json",
       function (font) {
         const geometry = new TextGeometry(`H : ${height} mm`, {
           font: font,

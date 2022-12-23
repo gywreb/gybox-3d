@@ -4,9 +4,9 @@ const RENDER_MODE = {
 };
 
 const MATERIALS = {
-  CARDBOARD: "/src/assets/textures/cardboard.jpg",
-  PAPER: "/src/assets/textures/paper.jpg",
-  PATTERN: "/src/assets/textures/pattern.jpg",
+  CARDBOARD: "/assets/textures/cardboard.jpg",
+  PAPER: "/assets/textures/paper.jpg",
+  PATTERN: "/assets/textures/pattern.jpg",
 };
 
 const EXPORT_FORMATS = {
