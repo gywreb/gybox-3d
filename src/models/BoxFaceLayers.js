@@ -1,18 +1,23 @@
 import * as THREE from "three";
-import { MathUtils, Mesh, Shape } from "three";
 import { TextGeometry } from "three/addons/geometries/TextGeometry.js";
 import { FontLoader } from "three/addons/loaders/FontLoader.js";
 import { mergeBufferGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { getDefaultRectangleShape, SHAPE_TYPES } from "../constants/constants";
-export default class BoxFace {
-  constructor(width, height, thickness, folds, name, pivotTranslate, shapes) {
+
+export default class BoxFaceLayers {
+  constructor(width, height, thickness, folds, name, pivotTranslate) {
     this.width = width;
     this.height = height;
+    // thickness in mm
     this.thickness = thickness / 10;
-    this.folds = folds || [];
+    this.waveFreq = 3;
+
+    this.folds = folds || [false, false, false, false];
+    // top edge: Z -> 0 when y -> plane height,
+    // right edge: Z -> 0 when x -> plane width,
+    // bottom edge: Z -> 0 when y -> 0,
+    // left edge: Z -> 0 when x -> 0
     this.name = name || "";
     this.pivotTranslate = pivotTranslate || [0, 0, 0];
-    this.shapes = shapes || getDefaultRectangleShape(width, height);
   }
 
   createLengthDefineLine(color, x, y, z) {
@@ -139,70 +144,16 @@ export default class BoxFace {
     return lengthDefineLine;
   }
 
-  drawShape(shape, { type, coordinates }) {
-    switch (type) {
-      case SHAPE_TYPES.LINE: {
-        shape.lineTo(
-          coordinates[0] || 0, // x
-          coordinates[1] || 0 // y
-        );
-        break;
-      }
-      case SHAPE_TYPES.BEZIER_CURVE: {
-        shape.bezierCurveTo(
-          coordinates[0] || 0,
-          coordinates[1] || 0,
-          coordinates[2] || 0,
-          coordinates[3] || 0,
-          coordinates[4] || 0,
-          coordinates[5] || 0
-        );
-        break;
-      }
-      case SHAPE_TYPES.ABS_ARC: {
-        shape.absarc(
-          coordinates[0] || 0,
-          coordinates[1] || 0,
-          coordinates[2] || 0,
-          coordinates[3] || 0,
-          coordinates[4] || 0,
-          true
-        );
-        break;
-      }
-      case SHAPE_TYPES.QUADRATIC_CURVE: {
-        shape.quadraticCurveTo(
-          coordinates[0] || 0,
-          coordinates[1] || 0,
-          coordinates[2] || 0,
-          coordinates[3] || 0
-        );
-        break;
-      }
-      default:
-        break;
-    }
-  }
+  createBoxDielineFace(color, x, y, z, s) {
+    const squareShape = new THREE.Shape()
+      .moveTo(0, 0)
+      .lineTo(0, this.height)
+      .lineTo(this.width, this.height)
+      .lineTo(this.width, 0);
 
-  createBoxDielineFace({
-    color,
-    positions = [0, 0, 0],
-    rotations = [0, 0, 0],
-  }) {
-    const boxFaceShape = new THREE.Shape();
-    // initialize the starting point
-    boxFaceShape.moveTo(0, 0);
+    squareShape.autoClose = true;
 
-    this.shapes.map((shape) => {
-      this.drawShape(boxFaceShape, {
-        type: shape.type,
-        coordinates: shape.coordinates,
-      });
-    });
-
-    boxFaceShape.autoClose = true;
-
-    const points = boxFaceShape.getPoints();
+    const points = squareShape.getPoints();
 
     const geometryPoints = new THREE.BufferGeometry().setFromPoints(points);
 
@@ -211,71 +162,34 @@ export default class BoxFace {
       geometryPoints,
       new THREE.LineBasicMaterial({ color: color })
     );
-    line.position.set(positions[0], positions[1], positions[2] - 25);
-    line.rotation.set(...rotations.map((point) => MathUtils.degToRad(point)));
-    // line.scale.set(s, s, s);
+    line.position.set(x, y, z - 25);
+    line.scale.set(s, s, s);
 
     return line;
   }
 
   // create fold effect at the edge of box face
-  createFoldLine(
-    foldSize,
-    foldPivotTranslation,
-    foldPositions,
-    foldRotation,
-    foldMainMaterial,
-    foldBevelMaterial
-  ) {
-    const archShape = new THREE.Shape();
-
-    const archExtrudeSetting = {
-      depth: foldSize,
-      bevelEnabled: true,
-      material: 0,
-      extrudeMaterial: 1,
-    };
-
-    archShape.arc(
-      0,
-      0,
-      this.thickness * 0.75,
-      0,
-      MathUtils.degToRad(180),
-      true
-    );
-
-    const archGeometry = new THREE.ExtrudeGeometry(
-      archShape,
-      archExtrudeSetting
-    );
-
-    const archMesh = new Mesh(archGeometry, [
-      foldMainMaterial,
-      foldBevelMaterial,
-    ]);
-
-    archGeometry.applyMatrix4(
-      new THREE.Matrix4().makeTranslation(...foldPivotTranslation)
-    );
-
-    archMesh.rotation.set(
-      ...foldRotation.map((angle) => MathUtils.degToRad(angle))
-    );
-
-    archMesh.position.set(...foldPositions);
-
-    return archMesh;
+  applyLayerFolds(x, y, z) {
+    let modifier = (c, s) => 1 - Math.pow(c / (0.5 * s), 10);
+    if ((x > 0 && this.folds[1]) || (x < 0 && this.folds[3])) {
+      z *= modifier(x, this.width * 2);
+    }
+    if ((y > 0 && this.folds[0]) || (y < 0 && this.folds[2])) {
+      z *= modifier(y, this.height);
+    }
+    return z;
   }
 
   // create box face from 3 layer: front, mid, back
   createLayerGeometry(baseGeometry, offset) {
     const layerGeometry = baseGeometry.clone();
     const layerPositions = layerGeometry.attributes.position;
+    layerGeometry.attributes.position.needsUpdate = true;
     for (let index = 0; index < layerPositions.count; index++) {
       let x = layerPositions.getX(index);
       let y = layerPositions.getY(index);
-      let z = layerPositions.getZ(index) + offset;
+      let z = layerPositions.getZ(index) + offset(x);
+      z = this.applyLayerFolds(x, y, z);
       layerPositions.setXYZ(index, x, y, z);
     }
     return layerGeometry;
@@ -284,7 +198,10 @@ export default class BoxFace {
   createLayerTopGeometry(baseGeometry) {
     const geometriesToMerge = [];
     geometriesToMerge.push(
-      this.createLayerGeometry(baseGeometry, -this.thickness)
+      this.createLayerGeometry(
+        baseGeometry,
+        (v) => 0.5 * this.thickness + 0.01 * Math.sin(this.waveFreq * v)
+      )
     );
     const mergedGeometry = new mergeBufferGeometries(geometriesToMerge, false);
     mergedGeometry.computeVertexNormals();
@@ -294,7 +211,10 @@ export default class BoxFace {
   createLayerBottomGeometry(baseGeometry) {
     const geometriesToMerge = [];
     geometriesToMerge.push(
-      this.createLayerGeometry(baseGeometry, this.thickness)
+      this.createLayerGeometry(
+        baseGeometry,
+        (v) => -0.5 * this.thickness + 0.01 * Math.sin(this.waveFreq * v)
+      )
     );
     const mergedGeometry = new mergeBufferGeometries(geometriesToMerge, false);
     mergedGeometry.computeVertexNormals();
@@ -304,7 +224,10 @@ export default class BoxFace {
   createLayerMidGeometry(baseGeometry) {
     const geometriesToMerge = [];
     geometriesToMerge.push(
-      this.createLayerGeometry(baseGeometry, -this.thickness / 2)
+      this.createLayerGeometry(
+        baseGeometry,
+        (v) => 0.5 * this.thickness * Math.sin(this.waveFreq * v)
+      )
     );
     const mergedGeometry = new mergeBufferGeometries(geometriesToMerge, false);
     mergedGeometry.computeVertexNormals();
@@ -324,97 +247,46 @@ export default class BoxFace {
       layerBottom: new THREE.Mesh(),
     };
 
-    const boxFaceShape = new THREE.Shape();
-    // initialize the starting point
-    boxFaceShape.moveTo(0, 0);
-
-    this.shapes.map((shape) => {
-      this.drawShape(boxFaceShape, {
-        type: shape.type,
-        coordinates: shape.coordinates,
-      });
-    });
-
-    boxFaceShape.autoClose = true;
-
-    const sideLayerExtrudeSettings = {
-      depth: 0,
-      bevelEnabled: false,
-    };
-
-    const midLayerExtrudeSetting = {
-      depth: this.thickness,
-      bevelEnabled: true,
-      material: 0,
-      extrudeMaterial: 1,
-    };
+    const baseGeometry = new THREE.PlaneGeometry(
+      this.width,
+      this.height,
+      Math.floor(5 * this.width),
+      Math.floor(0.2 * this.height)
+    );
 
     let faceTexture;
+
+    if (texture?.length) {
+      faceTexture = new THREE.TextureLoader().load(texture);
+    }
 
     const midLayerTexture = new THREE.TextureLoader().load(
       "/assets/textures/boxmid.jpg"
     );
-    midLayerTexture.wrapS = midLayerTexture.wrapT = THREE.RepeatWrapping;
-    midLayerTexture.repeat.set(0.05, 0.8);
 
-    const bottomLayerTexture = new THREE.TextureLoader().load(
-      "/assets/textures/cardboard.jpg"
-    );
-    bottomLayerTexture.wrapS = bottomLayerTexture.wrapT = THREE.RepeatWrapping;
-    bottomLayerTexture.repeat.set(0.005, 0.01);
-
-    if (texture?.length) {
-      faceTexture = new THREE.TextureLoader().load(texture);
-      faceTexture.wrapS = faceTexture.wrapT = THREE.RepeatWrapping;
-      faceTexture.repeat.set(0.005, 0.01);
-    }
-
-    const sideLayerGeometry = new THREE.ExtrudeGeometry(
-      boxFaceShape,
-      sideLayerExtrudeSettings
-    );
-
-    const midLayerGeometry = new THREE.ExtrudeGeometry(
-      boxFaceShape,
-      midLayerExtrudeSetting
-    );
-
-    const sideLayerMaterial = new THREE.MeshStandardMaterial(
+    const material = new THREE.MeshStandardMaterial(
       texture?.length
         ? {
             map: faceTexture,
             side: THREE.DoubleSide,
           }
-        : { color: color }
+        : { color: color, side: THREE.DoubleSide }
     );
-
-    const bottomLayerMaterial = new THREE.MeshStandardMaterial({
-      map: bottomLayerTexture,
-      side: THREE.DoubleSide,
-    });
-
-    const midLayerMaterial = new THREE.MeshStandardMaterial({
+    const midMaterial = new THREE.MeshStandardMaterial({
       map: midLayerTexture,
       side: THREE.DoubleSide,
     });
 
-    boxFaceStructure.layerBottom.material = bottomLayerMaterial;
-    boxFaceStructure.layerMid.material = midLayerMaterial;
-    boxFaceStructure.layerTop.material = sideLayerMaterial;
-
     boxFaceStructure.layerTop.geometry =
-      this.createLayerTopGeometry(sideLayerGeometry);
+      this.createLayerTopGeometry(baseGeometry);
     boxFaceStructure.layerMid.geometry =
-      this.createLayerMidGeometry(midLayerGeometry);
+      this.createLayerMidGeometry(baseGeometry);
     boxFaceStructure.layerBottom.geometry =
-      this.createLayerBottomGeometry(sideLayerGeometry);
+      this.createLayerBottomGeometry(baseGeometry);
 
-    boxFaceStructure.layerMid = new THREE.Mesh(midLayerGeometry, [
-      sideLayerMaterial,
-      midLayerMaterial,
-    ]);
-
-    boxFaceStructure.layerMid.translateZ(-this.thickness / 2);
+    boxFaceStructure.layerBottom.material = material;
+    boxFaceStructure.layerMid.material = midMaterial;
+    boxFaceStructure.layerTop.material = material;
 
     // move pivot rotate point
     boxFaceStructure.layerTop.geometry.applyMatrix4(
@@ -433,20 +305,6 @@ export default class BoxFace {
       boxFaceStructure.layerBottom
     );
 
-    this.folds.forEach((fold) => {
-      if (fold) {
-        const foldMesh = this.createFoldLine(
-          fold.width,
-          fold.pivotTranslation || [0, 0, 0],
-          fold.position || [0, 0, 0],
-          fold.rotate || [0, 0, 0],
-          midLayerMaterial,
-          sideLayerMaterial
-        );
-        boxFaceStructure.layer.add(foldMesh);
-      }
-    });
-
     boxFaceStructure.layer.position.set(x, y, z);
     boxFaceStructure.layer.rotation.set(
       THREE.MathUtils.degToRad(rx || 0),
@@ -455,6 +313,7 @@ export default class BoxFace {
     );
     boxFaceStructure.layer.receiveShadow = true;
     boxFaceStructure.layer.castShadow = true;
+
     boxFaceStructure.layer.name = this.name;
 
     return boxFaceStructure.layer;

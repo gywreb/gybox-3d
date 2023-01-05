@@ -21,12 +21,15 @@ import BoxDieline from "../BoxDieline/BoxDieline";
 import { capitalize } from "lodash";
 import BoxExporter from "../BoxExporter/BoxExporter";
 import Dropzone from "../../common/Dropzone/Dropzone";
+import BoxAnimation from "../BoxAnimation/BoxAnimation";
+import BoxAnimationVer2 from "../BoxAnimationVer2/BoxAnimationVer2";
 // import BoxAnimation from "../BoxAnimation/BoxAnimation";
 
 const BoxEditable = () => {
   const [renderMode, setRenderMode] = useState(RENDER_MODE.RENDER_2D);
   const [formValues, setFormValues] = useState(BOX_EDIT_DEFAULT_VALUES);
   const [isPreviewMockup, setIsPreviewMockup] = useState(false);
+  const [isPreviewAnimation, setIsPreviewAnimation] = useState(false);
   const canvasRef = useRef();
   const cameraRef = useRef();
   const topLight = useRef();
@@ -58,7 +61,6 @@ const BoxEditable = () => {
   };
 
   const convertImageBase64 = (files) => {
-    console.log(files);
     // check max. file size is not exceeded
     // size is in bytes
     var reader = new FileReader();
@@ -115,7 +117,7 @@ const BoxEditable = () => {
   return (
     <>
       <div className="flex h-full mt-20 items-center">
-        <div className="relative h-screen w-1/2 mr-4 mb-5">
+        <div className="relative h-screen w-2/3 mr-4 mb-5">
           <Canvas
             style={{ background: "#f9f9f9", borderRadius: "10px" }}
             gl={{ preserveDrawingBuffer: true }}
@@ -126,9 +128,9 @@ const BoxEditable = () => {
             <PerspectiveCamera
               ref={cameraRef}
               position={[300, 200, 700]}
-              fov={25}
-              near={0.1}
-              far={4000}
+              fov={35}
+              near={10}
+              far={40000}
               zoom={
                 200 /
                 (formValues.length > BOX_EDIT_DEFAULT_VALUES.length
@@ -153,7 +155,7 @@ const BoxEditable = () => {
                 ref={topLight}
                 color={0xffffff}
                 intensity={0.3}
-                position={[-30, 100, 0]}
+                position={[-30, 200, 0]}
                 castShadow
               />
               <pointLight
@@ -167,19 +169,52 @@ const BoxEditable = () => {
             {is3dRenderMode && (
               <>
                 <OrbitControls />
-                <Box3d
-                  {...formValues}
-                  faceColor={formValues.color}
-                  faceTexture={
-                    formValues.faceType === FACE_TYPES.MATERIAL ||
-                    formValues.faceType === FACE_TYPES.CUSTOM
-                      ? formValues.texture
-                      : ""
-                  }
-                  isPreviewMockup={isPreviewMockup}
-                  lightGroup={lightGroup}
-                  is3dRenderMode={is3dRenderMode}
-                />
+                {/* {isPreviewAnimation && (
+                  <BoxAnimation
+                    {...formValues}
+                    faceColor={formValues.color}
+                    faceTexture={
+                      formValues.faceType === FACE_TYPES.MATERIAL ||
+                      formValues.faceType === FACE_TYPES.CUSTOM
+                        ? formValues.texture
+                        : ""
+                    }
+                    isPreviewMockup={isPreviewMockup}
+                    lightGroup={lightGroup}
+                    is3dRenderMode={is3dRenderMode}
+                  />
+                )} */}
+                {!isPreviewMockup && (
+                  <Box3d
+                    {...formValues}
+                    faceColor={formValues.color}
+                    faceTexture={
+                      formValues.faceType === FACE_TYPES.MATERIAL ||
+                      formValues.faceType === FACE_TYPES.CUSTOM
+                        ? formValues.texture
+                        : ""
+                    }
+                    isPreviewMockup={isPreviewMockup}
+                    lightGroup={lightGroup}
+                    is3dRenderMode={is3dRenderMode}
+                  />
+                )}
+                {isPreviewMockup && (
+                  <BoxAnimationVer2
+                    {...formValues}
+                    faceColor={formValues.color}
+                    faceTexture={
+                      formValues.faceType === FACE_TYPES.MATERIAL ||
+                      formValues.faceType === FACE_TYPES.CUSTOM
+                        ? formValues.texture
+                        : ""
+                    }
+                    isPreviewMockup={isPreviewMockup}
+                    lightGroup={lightGroup}
+                    is3dRenderMode={is3dRenderMode}
+                    isPreviewAnimation={isPreviewAnimation}
+                  />
+                )}
               </>
             )}
             {!is3dRenderMode && (
@@ -200,7 +235,15 @@ const BoxEditable = () => {
                 onClick={() => setIsPreviewMockup((prev) => !prev)}
                 className={`text-white bg-emerald-500 mt-2 p-2 w-fit items-start justify-center rounded-md block`}
               >
-                Preview Mockup
+                View Alt Version
+              </Button>
+            )}
+            {is3dRenderMode && (
+              <Button
+                onClick={() => setIsPreviewAnimation((prev) => !prev)}
+                className={`text-white bg-pink-500 mt-2 p-2 w-fit items-start justify-center rounded-md block self-end`}
+              >
+                View Animation
               </Button>
             )}
           </div>
